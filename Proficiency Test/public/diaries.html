@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diaries</title>
+    <link rel="stylesheet" href="../css/styles.css"> <!-- Assuming you have a CSS file for styling -->
+    <style>
+        /* Additional styling for diary entries */
+        .diary-entry {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .diary-entry h2 {
+            margin-top: 0;
+        }
+        .diary-entry p {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Diary View</h1>
+        <label for="dateSelector">Select Date:</label>
+        <input type="date" id="dateSelector">
+        <!--This function does not work and will return 400 error as the authentication process was not implemented properly-->
+        <button onclick="fetchDiaryData()">Get Diaries</button>
+        <br>
+        <br>
+        <div id="diaryContent">
+            <!-- Diary entries will be displayed here -->
+            <!-- Sample diary entries for demonstration purposes -->
+            <div class="diary-entry">
+                <h2>2024-04-30</h2>
+                <p><strong>Doctor:</strong> Dr. Smith</p>
+                <p><strong>Patient:</strong> John Doe</p>
+                <p><strong>Appointment Type:</strong> General Checkup</p>
+                <p><strong>Notes:</strong> Patient presented with mild flu symptoms. Prescribed rest and fluids.</p>
+            </div>
+            <div class="diary-entry">
+                <h2>2024-05-01</h2>
+                <p><strong>Doctor:</strong> Dr. Johnson</p>
+                <p><strong>Patient:</strong> Jane Smith</p>
+                <p><strong>Appointment Type:</strong> Dental Checkup</p>
+                <p><strong>Notes:</strong> Patient had routine dental cleaning. No issues detected.</p>
+            </div>
+            <div class="diary-entry">
+                <h2>2024-05-02</h2>
+                <p><strong>Doctor:</strong> Dr. Lee</p>
+                <p><strong>Patient:</strong> Michael Johnson</p>
+                <p><strong>Appointment Type:</strong> Physical Examination</p>
+                <p><strong>Notes:</strong> Patient complained of back pain. Recommended physiotherapy.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="../js/diary.js"></script>
+</body>
+</html>

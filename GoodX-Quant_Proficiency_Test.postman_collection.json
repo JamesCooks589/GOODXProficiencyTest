@@ -1,0 +1,484 @@
+{
+	"info": {
+		"_postman_id": "f18995f1-de57-454d-8ac3-434572c730aa",
+		"name": "GoodX/Quant Proficiency Test",
+		"description": "This is a shortend version of the GXWeb API collection, compiled for the proficiency test.\n\nPlease perform the \"Login\" request first in order to get a session uid stored in your cookies. This will allow you to make all the other calls with that session UID as authentication.\n\nA user account has access to different Entities, each entity has Diaries, each diary has Bookings. Bookings have types, and statuses.\n\n# Relationships of GXWeb, Entity, Diary, Bookings, etc\n\n- A GXWeb install can have multiple **Entities**. (Usually an entity for each practice in a group)\n- An **Entity** can have multiple **Diaries**. (Usually a diary for each doctor at a practice)\n- A **Diary** can have multiple **Bookings**. (Usually a booking for each consultation session  \n    a doctor has)\n- **Booking**:\n    - A **Booking** can only be one **Booking_type**. (e.g. Consultation, Meeting, Follow-up)\n    - A **Booking** can be in any of the available **Booking_statuses** at a given time. (e.g. Booked, Arrived, Ready, Treated, Billed, Done)\n    - A **Booking** has both a **debtor** and a **patient**.\n    - A **Booking** can only have one **debtor** and one **patient**.\n- **Patient** & **Debtor**\n    - The **debtor** is the person responsible for payment.\n    - The **patient** is the person seeing the doctor. (Also known as the dependent of the  \n        debtor)\n    - The **debtor** and the **patient** can be the same person.\n    - One **debtor** can be responsible for multiple **patients** (or dependants).\n    - A typical example for the debtor/patient structure would be the following:\n        - A man has a wife and children. He is responsible for the medical account, and he is the main member of his family's medical aid. In the example the following is true:\n            - **Debtor**: Man\n            - **Patient(s)**: Man, Wife, Children\n        - When the man goes to see the doctor, he is both the **debtor** and the **patient** of the **booking**.\n        - When his wife goes to see the doctor, he is still the **debtor**, however she is now the **patient**.\n\n# Notes on the filter syntax used in some requests\n\nA structured query format is used to construct SQL where clause.\n\nBreak-down of an example:\n\n``` json\n[\n    \"OR\",\n    [\n        \"=\",\n        [\"I\", \"name\"],\n        [\"L\", \"JOHN\"]\n    ],\n    [\n        \"ILIKE\",\n        [\"I\", \"surname\"],\n        [\"L\", \"SMITH\"]\n    ]\n]\n\n ```\n\n- The top-level element is an \"OR\" operator, indicating that the conditions inside it are combined using a logical OR.\n- Inside the \"OR\" operator, there are two conditions:\n    - The first condition uses an `=` operator, which likely stands for equality comparison.\n        - `[\"I\", \"name\"]` indicates that the attribute being compared is the \"name\" attribute.\n        - `[\"L\", \"JOHN\"]` indicates that the value being compared is \"JOHN\".\n    - The second condition uses an `ILIKE` operator (case-insensitive pattern matching - see Postgres documentation).\n        - `[\"I\", \"surname\"]` indicates that the attribute being compared is the \"surname\" attribute.\n        - `[\"L\", \"SMITH\"]` indicates that the pattern being matched is \"SMITH\".\n- The use of `[\"I\", ...]` and `[\"L\", ...]` indicates that the values are being referenced as identifiers (`I`) or literals (`L`).\n    \n\n# Test the API using this collection\n\nYou can perform the following steps to test the GXWeb API:\n\n1. Enter your details in the collection's \"Variables\" tab\n    \n    1. Make sure the GXWeb URL is correct in the **gxweb_url** variable\n    2. Enter your username in the **gxweb_user** variable\n    3. Enter your password in the **gxweb_pass** variable\n    4. Set the date you want to work on in the **date_string** variable\n2. Run the **Login** request\n    1. This should use your credentials and automatically store the session UID in the Postman cookies\n3. Run the **Get Diaries** request\n    1. This will return the available diaries.\n    2. This will also store the entity_uid and diary_uid in the variables.\n4. Run the **Get Bookings** request\n    1. This is just to see the diaries for the selected day.\n5. Run the **Get Booking statuses** request\n    1. This will return all the available booking types.\n6. Run the **Get Booking types** request\n    1. This will return the available booking types.\n    2. It will also set the booking_type_uid and booking_status_uid in the variables.\n7. Run the **Get Debtors** request\n    1. This will show the saved debtors.\n8. Run the **Get Patients** request\n    1. This will show the saved patients.\n    2. The first returned patient's patient_uid will be stored in the variables.\n9. Run the **Create Booking** request\n    1. This will create a booking with the details stored in the variables. (entity, diary, patient, date, etc)\n    2. The returned booking_uid is saved in the variables.\n10. Run the **Update Booking** request\n    1. This will update some of the bookings parameters.\n11. Run the **Delete Booking** request\n    1. This will update the \"cancelled\" parameter on the booking to \"true\" so it appears deleted.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "18230456"
+	},
+	"item": [
+		{
+			"name": "Login",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"model\": {\n        \"timeout\": 259200\n    },\n    \"auth\": [\n        [\n            \"password\",\n            {\n                \"username\": \"{{gxweb_user}}\",\n                \"password\": \"{{gxweb_pass}}\"\n            }\n        ]\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{gxweb_url}}/api/session",
+					"host": [
+						"{{gxweb_url}}"
+					],
+					"path": [
+						"api",
+						"session"
+					]
+				},
+				"description": "Perform a login on the GXWeb site. Note that you can also go to the base URL in your browser and log into the web application.\n\nNOTE: Performing this call will store the returned session_uid in the Postman cookies. This will allow you to make all the other calls with that session_uid as auth."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Diaries",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Set entity_uid and diary_uid\", function () {",
+							"    const response = pm.response.json();",
+							"    //console.log(response.data[0]);",
+							"    pm.collectionVariables.set('entity_uid', response.data[0].entity_uid); //store the entity uid",
+							"    pm.collectionVariables.set('diary_uid', response.data[0].uid); //store the diary uid",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{gxweb_url}}/api/diary?fields=[\n    \"uid\",\n    \"entity_uid\",\n    \"treating_doctor_uid\",\n    \"service_center_uid\",\n    \"booking_type_uid\",\n    \"name\",\n    \"uuid\",\n    \"disabled\"\n]",
+					"host": [
+						"{{gxweb_url}}"
+					],
+					"path": [
+						"api",
+						"diary"
+					],
+					"query": [
+						{
+							"key": "fields",
+							"value": "[\n    \"uid\",\n    \"entity_uid\",\n    \"treating_doctor_uid\",\n    \"service_center_uid\",\n    \"booking_type_uid\",\n    \"name\",\n    \"uuid\",\n    \"disabled\"\n]",
+							"description": "Some basic fields to be returned."
+						},
+						{
+							"key": "fields",
+							"value": "[\n    \"uid\",\n    \"entity_uid\",\n    \"treating_doctor_uid\",\n    \"service_center_uid\",\n    \"booking_type_uid\",\n    \"name\",\n    \"uuid\",\n    \"disabled\",\n    \"booking_types\",\n    \"booking_statuses\"\n]",
+							"description": "Extended fields which includes booking statusses and booking types for each diary.",
+							"disabled": true
+						},
+						{
+							"key": "filter",
+							"value": "[\n    \"AND\",\n    [\n        \"=\",\n        [\"I\",\"entity_uid\"],\n        [\"L\",{{entity_uid}}]\n    ]\n]",
+							"description": "This is to filter, to show only diaries for a specific entity. You can use this If you know your entity...",
+							"disabled": true
+						}
+					]
+				},
+				"description": "List the diaries available to the logged in user.  \nNote that you can use this call to see to which entity a diary belongs.\n\nWhen the call is finished, a small piece of JavaScript code runs automatically in the Tests tab to store the first diary's diary_uid and entity_uid in the collection variables, so it can be used in future calls."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Bookings",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{gxweb_url}}/api/booking?fields=[\n    [\"AS\",[\"I\",\"patient_uid\",\"name\"],\"patient_name\"],\n    [\"AS\",[\"I\",\"patient_uid\",\"surname\"],\"patient_surname\"],\n    [\"AS\",[\"I\",\"patient_uid\",\"debtor_uid\",\"name\"],\"debtor_name\"],\n    [\"AS\",[\"I\",\"patient_uid\",\"debtor_uid\",\"surname\"],\"debtor_surname\"],\n    \"uid\",\n    \"entity_uid\",\n    \"diary_uid\",\n    \"booking_type_uid\",\n    \"booking_status_uid\",\n    \"patient_uid\",\n    \"start_time\",\n    \"duration\",\n    \"treating_doctor_uid\",\n    \"reason\",\n    \"invoice_nr\",\n    \"cancelled\",\n    \"uuid\"\n]&filter=[\n    \"AND\",\n    [\n        \"=\",\n        [\"I\",\"diary_uid\"],\n        [\"L\",{{diary_uid}}]\n    ],\n    [\n        \"=\",\n        [\n            \"::\",\n            [\"I\",\"start_time\"],\n            [\"I\",\"date\"]\n        ],\n        [\"L\",\"{{date_string}}\"]\n    ]\n]",
+					"host": [
+						"{{gxweb_url}}"
+					],
+					"path": [
+						"api",
+						"booking"
+					],
+					"query": [
+						{
+							"key": "fields",
+							"value": "[\n    [\"AS\",[\"I\",\"patient_uid\",\"name\"],\"patient_name\"],\n    [\"AS\",[\"I\",\"patient_uid\",\"surname\"],\"patient_surname\"],\n    [\"AS\",[\"I\",\"patient_uid\",\"debtor_uid\",\"name\"],\"debtor_name\"],\n    [\"AS\",[\"I\",\"patient_uid\",\"debtor_uid\",\"surname\"],\"debtor_surname\"],\n    \"uid\",\n    \"entity_uid\",\n    \"diary_uid\",\n    \"booking_type_uid\",\n    \"booking_status_uid\",\n    \"patient_uid\",\n    \"start_time\",\n    \"duration\",\n    \"treating_doctor_uid\",\n    \"reason\",\n    \"invoice_nr\",\n    \"cancelled\",\n    \"uuid\"\n]",
+							"description": "Some basic fields to be returned with useful info."
+						},
+						{
+							"key": "filter",
+							"value": "[\n    \"AND\",\n    [\n        \"=\",\n        [\"I\",\"diary_uid\"],\n        [\"L\",{{diary_uid}}]\n    ],\n    [\n        \"=\",\n        [\n            \"::\",\n            [\"I\",\"start_time\"],\n            [\"I\",\"date\"]\n        ],\n        [\"L\",\"{{date_string}}\"]\n    ]\n]",
+							"description": "A filter to only return bookings for a specific diary on a specific date."
+						}
+					]
+				},
+				"description": "List the bookings on a diary on a specific date."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Booking statuses",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{gxweb_url}}/api/booking_status?fields=[\n    \"uid\",\n    \"entity_uid\",\n    \"diary_uid\",\n    \"name\",\n    \"next_booking_status_uid\",\n    \"is_arrived\",\n    \"is_final\",\n    \"disabled\"\n]&filter=[\"AND\",\n    [\"=\",\n        [\"I\",\"entity_uid\"],\n        [\"L\",{{entity_uid}}]\n    ],\n    [\"=\",\n        [\"I\",\"diary_uid\"],\n        [\"L\",{{diary_uid}}]\n    ],\n    [\"NOT\",\n        [\"I\",\"disabled\"]\n    ]\n]",
+					"host": [
+						"{{gxweb_url}}"
+					],
+					"path": [
+						"api",
+						"booking_status"
+					],
+					"query": [
+						{
+							"key": "fields",
+							"value": "[\n    \"uid\",\n    \"entity_uid\",\n    \"diary_uid\",\n    \"name\",\n    \"next_booking_status_uid\",\n    \"is_arrived\",\n    \"is_final\",\n    \"disabled\"\n]",
+							"description": "Some basic fields to be returned with useful info."
+						},
+						{
+							"key": "filter",
+							"value": "[\"AND\",\n    [\"=\",\n        [\"I\",\"entity_uid\"],\n        [\"L\",{{entity_uid}}]\n    ],\n    [\"=\",\n        [\"I\",\"diary_uid\"],\n        [\"L\",{{diary_uid}}]\n    ],\n    [\"NOT\",\n        [\"I\",\"disabled\"]\n    ]\n]",
+							"description": "Filter to only return booking statuses available for the selected entity and diary. Also filter to NOT return deleted booking statuses."
+						}
+					]
+				},
+				"description": "Get a list of bookings statuses (and their details) that are available for the entity and diary. (e.g. Booked, Billed, Arrived, Done)"
+			},
+			"response": []
+		},
+		{
+			"name": "Get Booking types",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Set booking_type_uid and booking_status_uid\", function () {",
+							"    const response = pm.response.json();",
+							"    //console.log(response.data[0]);",
+							"    const targetName = \"Consultation\".toLowerCase(); // Get the uid for the consultation booking type, normal booking",
+							"    const SelectedBookingType = response.data.find(item => item.name.toLowerCase() === targetName);",
+							"    if (SelectedBookingType) {",
+							"        pm.collectionVariables.set('booking_type_uid', SelectedBookingType.uid); //store the booking_type_uid",
+							"        pm.collectionVariables.set('booking_status_uid', SelectedBookingType.booking_status_uid); //store the booking_status_uid",
+							"        console.log(`booking_type_uid: ${SelectedBookingType.uid}, booking_status_uid: ${SelectedBookingType.booking_status_uid}`);",
+							"    } else {",
+							"        console.log(\"Bookin type not found\");",
+							"    }",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{gxweb_url}}/api/booking_type?fields=[\n    \"uid\",\n    \"entity_uid\",\n    \"diary_uid\",\n    \"name\",\n    \"booking_status_uid\",\n    \"disabled\",\n    \"uuid\"\n]&filter=[\"AND\",\n    [\"=\",\n        [\"I\",\"entity_uid\"],\n        [\"L\",{{entity_uid}}]\n    ],\n    [\"=\",\n        [\"I\",\"diary_uid\"],\n        [\"L\",{{diary_uid}}]\n    ],\n    [\"NOT\",\n        [\"I\",\"disabled\"]\n    ]\n]",
+					"host": [
+						"{{gxweb_url}}"
+					],
+					"path": [
+						"api",
+						"booking_type"
+					],
+					"query": [
+						{
+							"key": "fields",
+							"value": "[\n    \"uid\",\n    \"entity_uid\",\n    \"diary_uid\",\n    \"name\",\n    \"booking_status_uid\",\n    \"disabled\",\n    \"uuid\"\n]",
+							"description": "Some basic fields to be returned with useful info."
+						},
+						{
+							"key": "filter",
+							"value": "[\"AND\",\n    [\"=\",\n        [\"I\",\"entity_uid\"],\n        [\"L\",{{entity_uid}}]\n    ],\n    [\"=\",\n        [\"I\",\"diary_uid\"],\n        [\"L\",{{diary_uid}}]\n    ],\n    [\"NOT\",\n        [\"I\",\"disabled\"]\n    ]\n]",
+							"description": "Filter to only return booking types available for the selected entity and diary. Also filter to NOT return deleted booking types."
+						}
+					]
+				},
+				"description": "Get a list of bookings types that are available for the entity and diary. (e.g. Consultation, Follow-up, Meeting)  \nNote that each booking type has a default booking status, indicated by the \"booking_status_uid\" key.\n\nWhen the call is finished, a small piece of JavaScript code runs automatically in the Tests tab to store the booking_type_uid and booking_status_uid of the returned \"consultation\" booking type in the collection variables, so it can be used in future calls."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Debtors",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{gxweb_url}}/api/debtor?fields=[\n    \"uid\",\n    \"entity_uid\",\n    \"name\",\n    \"surname\",\n    \"initials\",\n    \"title\",\n    \"id_type\",\n    \"id_no\",\n    \"mobile_no\",\n    \"email\",\n    \"file_no\",\n    \"gender\",\n    \"acc_identifier\",\n    \"patients\",\n    \"medical_aid_option_uid\",\n    \"medical_aid_no\",\n    \"medical_aid_scheme_code\"\n]&filter=[\n\t\"=\",\n\t[\"I\", \"entity_uid\"],\n\t[\"L\", {{entity_uid}}]\n]&limit=100",
+					"host": [
+						"{{gxweb_url}}"
+					],
+					"path": [
+						"api",
+						"debtor"
+					],
+					"query": [
+						{
+							"key": "fields",
+							"value": "[\n    \"uid\",\n    \"entity_uid\",\n    \"name\",\n    \"surname\",\n    \"initials\",\n    \"title\",\n    \"id_type\",\n    \"id_no\",\n    \"mobile_no\",\n    \"email\",\n    \"file_no\",\n    \"gender\",\n    \"acc_identifier\",\n    \"patients\",\n    \"medical_aid_option_uid\",\n    \"medical_aid_no\",\n    \"medical_aid_scheme_code\"\n]",
+							"description": "Some basic fields to be returned with useful info."
+						},
+						{
+							"key": "filter",
+							"value": "[\n\t\"=\",\n\t[\"I\", \"entity_uid\"],\n\t[\"L\", {{entity_uid}}]\n]",
+							"description": "Filter to only return debtors for the selected entity."
+						},
+						{
+							"key": "limit",
+							"value": "100",
+							"description": "Return a maximum of 100 patients"
+						}
+					]
+				},
+				"description": "Get the debtors for a specific entity.  \nNote that one of the returned fields for each debtor is the patients. Which will return the patients (and their details) stored under each debtor."
+			},
+			"response": []
+		},
+		{
+			"name": "Get Patients",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Set a random patient_uid\", function () {",
+							"    const response = pm.response.json();",
+							"    //console.log(response.data[0]);",
+							"    pm.collectionVariables.set('patient_uid', response.data[0].uid); //store the patient uid",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{gxweb_url}}/api/patient?fields=[\n\t\"uid\",\n\t\"entity_uid\",\n\t\"debtor_uid\",\n\t\"name\",\n\t\"surname\",\n\t\"initials\",\n\t\"title\",\n\t\"id_type\",\n\t\"id_no\",\n\t\"date_of_birth\",\n\t\"mobile_no\",\n\t\"email\",\n\t\"file_no\",\n\t\"gender\",\n\t\"dependant_no\",\n\t\"dependant_type\",\n\t\"acc_identifier\",\n\t\"gap_medical_aid_option_uid\",\n\t\"gap_medical_aid_no\",\n\t\"private\",\n\t\"patient_classification_uid\"\n]&filter=[\n\t\"=\",\n\t[\"I\", \"entity_uid\"],\n\t[\"L\", 1]\n]&limit=100",
+					"host": [
+						"{{gxweb_url}}"
+					],
+					"path": [
+						"api",
+						"patient"
+					],
+					"query": [
+						{
+							"key": "fields",
+							"value": "[\n\t\"uid\",\n\t\"entity_uid\",\n\t\"debtor_uid\",\n\t\"name\",\n\t\"surname\",\n\t\"initials\",\n\t\"title\",\n\t\"id_type\",\n\t\"id_no\",\n\t\"date_of_birth\",\n\t\"mobile_no\",\n\t\"email\",\n\t\"file_no\",\n\t\"gender\",\n\t\"dependant_no\",\n\t\"dependant_type\",\n\t\"acc_identifier\",\n\t\"gap_medical_aid_option_uid\",\n\t\"gap_medical_aid_no\",\n\t\"private\",\n\t\"patient_classification_uid\"\n]",
+							"description": "Some basic fields to be returned with useful info."
+						},
+						{
+							"key": "filter",
+							"value": "[\n\t\"=\",\n\t[\"I\", \"entity_uid\"],\n\t[\"L\", 1]\n]",
+							"description": "Filter to only return patients for the selected entity."
+						},
+						{
+							"key": "limit",
+							"value": "100",
+							"description": "Return a maximum of 100 patients"
+						}
+					]
+				},
+				"description": "Get the debtors for a specific entity. Note that for each patient, an UID for their debtor is present.\n\nWhen the call is finished, a small piece of JavaScript code runs automatically in the Tests tab to store the patient_uid of the first returned patient in the collection variables, so it can be used in future calls."
+			},
+			"response": []
+		},
+		{
+			"name": "Create Booking",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Set booking_uid\", function () {",
+							"    const response = pm.response.json();",
+							"    //console.log(response.data[0]);",
+							"    pm.collectionVariables.set('booking_uid', response.data.uid); //store the booking uid",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"model\": \n    {\n        \"entity_uid\": {{entity_uid}}, // Entity for which the booking is created\n        \"diary_uid\": {{diary_uid}}, // Entity on which the booking is created\n        \"booking_type_uid\": {{booking_type_uid}}, // Type of booking to be created\n        \"booking_status_uid\": {{booking_status_uid}}, // The status that the created booking should be set to.\n        \"start_time\": \"{{date_string}}T08:00:00\", // Start date and time for the created booking.\n        \"duration\": 15, // Duration for the booking\n        \"patient_uid\": {{patient_uid}}, // Patient for which the booking is created\n        \"reason\": \"Cool example reason here\", // A reason for the created booking. (e.g Patient has neck pain)\n        \"cancelled\": false // Is the booking cancelled? (Make false to actually show the booking in GXWeb)\n    }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{gxweb_url}}/api/booking",
+					"host": [
+						"{{gxweb_url}}"
+					],
+					"path": [
+						"api",
+						"booking"
+					]
+				},
+				"description": "Create a booking with the parameters given in the request body.  \n  \nWhen the call is finished, a small piece of JavaScript code runs automatically in the Tests tab to store the returned booking_uid in the collection variables, so it can be used in future calls."
+			},
+			"response": []
+		},
+		{
+			"name": "Update Booking",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"model\": \n    {\n        \"uid\": {{booking_uid}}, // UID for the booking to be updated\n        \"start_time\": \"{{date_string}}T09:00:00\", //You can put a different time here to update the booking time/date\n        \"duration\": 50, //You can put a different time here to update the booking duration\n        \"patient_uid\": {{patient_uid}}, //You can put a different patient here to update the booking's patient\n        \"reason\": \"This is now an updated booking example\", // You can set an updated reason here\n        \"cancelled\": false //You can change this to true, to cancel/delete the booking\n    }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{gxweb_url}}/api/booking/{{booking_uid}}",
+					"host": [
+						"{{gxweb_url}}"
+					],
+					"path": [
+						"api",
+						"booking",
+						"{{booking_uid}}"
+					]
+				},
+				"description": "Update a specific booking.  \nIn the request body, in the model, provide the booking UID and the attributes to be updated. (e.g. date/time, reason, etc.)"
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Booking",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"model\": \n    {\n        \"uid\": {{booking_uid}}, // UID for the booking to be deleted\n        \"cancelled\": true //You can make this true to cancel/delete the booking\n    }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{gxweb_url}}/api/booking/{{booking_uid}}",
+					"host": [
+						"{{gxweb_url}}"
+					],
+					"path": [
+						"api",
+						"booking",
+						"{{booking_uid}}"
+					]
+				},
+				"description": "This is a specific case of the update booking request.  \nA booking is updated to change the \"cancelled\" tag to \"true\". This will tell GXWeb that the booking is deleted/cancelled.\n\nNOTE: Deleted bookings can still be located using the Get Bookings request, and the \"cancelled\" tag can be changed back to \"false\" to un-delete the booking."
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "gxweb_url",
+			"value": "https://dev_interview.qagoodx.co.za",
+			"type": "string"
+		},
+		{
+			"key": "gxweb_user",
+			"value": "USERNAME",
+			"type": "string"
+		},
+		{
+			"key": "gxweb_pass",
+			"value": "PASSWORD",
+			"type": "string"
+		},
+		{
+			"key": "date_string",
+			"value": "2023-12-01"
+		},
+		{
+			"key": "entity_uid",
+			"value": "-1"
+		},
+		{
+			"key": "diary_uid",
+			"value": "-1"
+		},
+		{
+			"key": "booking_type_uid",
+			"value": "-1"
+		},
+		{
+			"key": "booking_status_uid",
+			"value": "-1"
+		},
+		{
+			"key": "patient_uid",
+			"value": "-1"
+		},
+		{
+			"key": "booking_uid",
+			"value": "-1"
+		}
+	]
+}
